@@ -74,7 +74,7 @@ bool DownloadManager::resumeDownload(int downloadId)
 }
 
 bool DownloadManager::stopDownload(int downloadId)
-{    
+{
     return m_downloadManagerImpl->stopDownload(downloadId);
 }
 

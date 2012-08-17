@@ -15,6 +15,20 @@
 #include <QDebug>
 #include <QSqlError>
 
+
+// Looks for existing connections.
+// TODO: some how, this should use libdbutils?
+static QSqlDatabase findExistedConnection(const QString &a_dbName) {
+    Q_FOREACH(QString conName, QSqlDatabase::connectionNames()) {
+        QSqlDatabase db = QSqlDatabase::database(conName);
+        if (db.databaseName() == a_dbName) {
+            return db;
+        }
+    }
+
+    return QSqlDatabase();
+}
+
 DBConnection::DBConnection(QObject *parent) :
     QObject(parent)
 {
@@ -40,13 +54,18 @@ bool DBConnection::open(const QString &dbFilePathName)
     if (isOpen())
         m_sqlDatabase.close();
 
-    m_sqlDatabase = QSqlDatabase::addDatabase("QSQLITE");
-    m_sqlDatabase.setDatabaseName(dbFilePathName);
-    bool ret = m_sqlDatabase.open();
+    QSqlDatabase oldDb = findExistedConnection(dbFilePathName);
+    if (oldDb.isValid()) {
+        m_sqlDatabase = oldDb;
+    } else {
+        m_sqlDatabase = QSqlDatabase::addDatabase("QSQLITE");
+        m_sqlDatabase.setDatabaseName(dbFilePathName);
+        m_sqlDatabase.open();
+    }
 
     m_databaseFilePathName = dbFilePathName;
 
-    return ret;
+    return m_sqlDatabase.isOpen();
 }
 
 bool DBConnection::open()

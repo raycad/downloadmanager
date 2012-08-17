@@ -19,10 +19,10 @@ class Contact
 public:
     enum ContactType {
         None = -1,
-        NormalContact,
-        Url,
-        Application,
-        Music
+        NormalContact = 0,
+        Url = 1,
+        Application = 2,
+        Music = 3
     };
 
     // Constructors

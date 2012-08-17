@@ -30,9 +30,10 @@ DownloadManagerImpl::DownloadManagerImpl(QObject *parent) :
 void DownloadManagerImpl::initialize()
 {
     // Initialize supported types
-    m_supportedMusicTypeList << ".mp3" << ".ogg" << ".ogv";
-    m_supportedVideoTypeList << ".avi";
-    m_supportedApplicationTypeList << ".wgt" << ".img";
+    m_supportedMusicTypeList << ".mp3" << ".ogg";
+    m_supportedVideoTypeList << ".avi" << ".ogv";
+    m_supportedApplicationTypeList << ".wgt";
+    m_supportedPlaylistTypeList << ".pls";
 
     m_dbConnection = new DBConnection();
     Q_ASSERT(m_dbConnection != 0);
@@ -300,6 +301,9 @@ int DownloadManagerImpl::getUrlTypeByUrl(const QString &url)
     if (m_supportedApplicationTypeList.contains(fileExtension))
         return DownloadManager::Application;
 
+    if (m_supportedPlaylistTypeList.contains(fileExtension))
+        return DownloadManager::Playlist;
+
     return DownloadManager::UnknownType;
 }
 
@@ -524,7 +528,7 @@ void DownloadManagerImpl::setDBStoragePath(const QString &dbPath)
     QString createDownloadTableString = QString(
             "CREATE TABLE IF NOT EXISTS %1(id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, "
             "contact_id INTEGER, url TEXT, url_type INTEGER, status INTEGER)").arg(DOWNLOAD_TABLE_NAME);
-    m_dbConnection = new DBConnection();
+//    m_dbConnection = new DBConnection();
     m_dbConnection->createTable(createDownloadTableString);
 }
 

@@ -12,7 +12,6 @@
 #include "downloadthread.h"
 #include "download.h"
 #include <QDebug>
-#include <QFile>
 #include <QTime>
 
 DownloadThread::DownloadThread(Download *download) : QThread(download)
@@ -42,14 +41,14 @@ void DownloadThread::init()
         delete m_downloadProgressTimer;
     m_downloadProgressTimer = new QTimer;
     Q_ASSERT(m_downloadProgressTimer != 0);
-    //connect(m_downloadProgressTimer, SIGNAL(timeout()), this, SLOT(updateDownloadProgress()), Qt::DirectConnection);
+    connect(m_downloadProgressTimer, SIGNAL(timeout()), this, SLOT(updateDownloadProgress()), Qt::DirectConnection);
     m_downloadProgressTimer->start(1000*DOWNLOAD_PROGRESS_INTERVAL);
 
     if (m_downloadTimeoutTimer)
         delete m_downloadTimeoutTimer;
     m_downloadTimeoutTimer = new QTimer;
     Q_ASSERT(m_downloadTimeoutTimer != 0);
-    //connect(m_downloadTimeoutTimer, SIGNAL(timeout()), this, SLOT(updateDownloadTimeout()), Qt::DirectConnection);
+    connect(m_downloadTimeoutTimer, SIGNAL(timeout()), this, SLOT(updateDownloadTimeout()), Qt::DirectConnection);
     m_downloadTimeoutTimer->start(1000*DOWNLOAD_TIMEOUT);
 
     if (m_downloadTime)
@@ -67,6 +66,15 @@ void DownloadThread::init()
     connect(m_networkReply, SIGNAL(finished()), this, SLOT(slotDownloadFinished()), Qt::DirectConnection);
     connect(m_networkReply, SIGNAL(error(QNetworkReply::NetworkError)), this, SLOT(slotDownloadError(QNetworkReply::NetworkError)), Qt::DirectConnection);
     connect(m_networkReply, SIGNAL(sslErrors(QList<QSslError>)), this, SIGNAL(downloadSslErrors(QList<QSslError>)), Qt::DirectConnection);
+    connect(m_networkReply, SIGNAL(readyRead()), this, SLOT(slotReadyRead()), Qt::DirectConnection);
+
+    QString savedFilePath = m_download->getSavedFilePathName();
+    m_output.setFileName(savedFilePath);
+    if (!m_output.open(QIODevice::WriteOnly)) {
+        emit downloadError(m_download->getId(), DownloadManager::CanNotWriteToDisk);
+        exit();
+        return; // skip this download
+    }
 }
 
 void DownloadThread::disconnectSignals()
@@ -89,7 +97,7 @@ void DownloadThread::run()
 
 void DownloadThread::updateDownloadProgress()
 {
-    /*m_canUpdateProgress = true;
+    m_canUpdateProgress = true;
 
     if (m_hasData) {
         m_hasData = false;
@@ -99,7 +107,7 @@ void DownloadThread::updateDownloadProgress()
         m_currentRemainTime = -1;
         emit noReceivedData(downloadId);
         qDebug() << __PRETTY_FUNCTION__ << " Emitted noReceivedData signal. Download Id = " << downloadId;
-    }*/
+    }
 }
 
 void DownloadThread::updateDownloadTimeout()
@@ -120,9 +128,7 @@ void DownloadThread::slotDownloadProgress(qint64 bytesReceived, qint64 bytesTota
 {
     m_hasData = true;
 
-    qDebug() << __PRETTY_FUNCTION__ << "RAYCAD==> Download progress";
-
-    /*if (m_canUpdateProgress) {
+    if (m_canUpdateProgress) {
         int elapseTime = 1;
         if (m_downloadTime != 0)
             elapseTime = m_downloadTime->elapsed();
@@ -142,23 +148,29 @@ void DownloadThread::slotDownloadProgress(qint64 bytesReceived, qint64 bytesTota
         }
 
         m_canUpdateProgress = false;
-    }*/
+    }
 }
 
 void DownloadThread::slotDownloadFinished()
 {
-    QString savedFilePath = m_download->getSavedFilePathName();
     m_currentRemainTime = 0;
+    m_output.close();
 
-    QFile file(savedFilePath);
-    if (file.open(QIODevice::WriteOnly)) {
-        file.write(m_networkReply->readAll());
-        file.close();
-    }
+    if (m_networkReply->error()) {
+        qDebug() << __PRETTY_FUNCTION__ << " Download failed" << ", downloadId = " << m_download->getId() << ": " << m_networkReply->errorString();
+        // download failed
+        emit downloadError(m_download->getId(), DownloadManager::UnknownError);
+    } else
+        emit downloadFinished();
 
     m_networkReply->deleteLater();
+    m_networkReply = 0;
+}
 
-    emit downloadFinished();
+void DownloadThread::slotReadyRead()
+{
+    if (m_networkReply)
+        m_output.write(m_networkReply->readAll());
 }
 
 int DownloadThread::getCurrentRemainTime()
@@ -174,9 +186,18 @@ void DownloadThread::stop()
 DownloadThread::~DownloadThread()
 {
     m_networkAccessManager->deleteLater();
+
     if (m_downloadTime)
         delete m_downloadTime;
     m_downloadTime = 0;
+
+    if (m_downloadProgressTimer)
+        delete m_downloadProgressTimer;
+    m_downloadProgressTimer = 0;
+
+    if (m_downloadTimeoutTimer)
+        delete m_downloadTimeoutTimer;
+    m_downloadTimeoutTimer = 0;
 
     this->wait();
 }

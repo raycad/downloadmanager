@@ -249,6 +249,7 @@ private:
     QStringList m_supportedMusicTypeList;
     QStringList m_supportedVideoTypeList;
     QStringList m_supportedApplicationTypeList;
+    QStringList m_supportedPlaylistTypeList;
 
     // Database connection
     DBConnection *m_dbConnection;

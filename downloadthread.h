@@ -15,6 +15,7 @@
 #include <QThread>
 #include <QNetworkReply>
 #include <QTimer>
+#include <QFile>
 #include "downloadmanager.h"
 
 class Download;
@@ -90,6 +91,9 @@ protected slots:
     // Update download timeout
     void updateDownloadTimeout();
 
+    // Write buffer to file
+    void slotReadyRead();
+
 protected:
 
     void run();
@@ -105,6 +109,8 @@ private:
     QTimer *m_downloadTimeoutTimer;
 
     QTime *m_downloadTime;
+
+    QFile m_output; // File to store dta stream
 
     QNetworkAccessManager *m_networkAccessManager;
     QNetworkReply *m_networkReply;

@@ -28,7 +28,8 @@ public:
         UnknownType = -1,
         Application = 0,
         Music = 1,
-        Video = 2
+        Video = 2,
+        Playlist = 3
     };
 
     enum DownloadStatus {
@@ -42,6 +43,7 @@ public:
     };
 
     enum DownloadErrorCode {
+        UnknownError = -1,
         NoError = 0,
 
         // network layer errors [relating to the destination server] (1-99):
@@ -80,6 +82,7 @@ public:
         DownloadInQueue = 402,
         FileDownloading = 403,
         CanNotInsertDownloadToDB = 404, // Can not insert record set to db, might db has been being locked
+        CanNotWriteToDisk = 405, // Can not write data to the disk
         UnknownUrlType = 499
     };
 
